@@ -87,6 +87,9 @@ with sync_playwright() as p:
 - Always close the browser when done
 - Use descriptive selectors: `text=`, `role=`, CSS selectors, or IDs
 - Add appropriate waits: `page.wait_for_selector()` or `page.wait_for_timeout()`
+- For slow servers (Go builds, large apps), increase readiness timeout (e.g., `--timeout 120`) and expect the first run to be slower.
+- If the server fails to start, check for stale processes binding the port and stop them before retrying.
+- Validate critical selectors by fetching the rendered HTML (`curl` + `rg`) before asserting in Playwright when iterating.
 
 ## Reference Files
 
@@ -94,3 +97,19 @@ with sync_playwright() as p:
   - `element_discovery.py` - Discovering buttons, links, and inputs on a page
   - `static_html_automation.py` - Using file:// URLs for local HTML
   - `console_logging.py` - Capturing console logs during automation
+
+## Examples: Slow Server Start + Go Run
+
+```bash
+python scripts/with_server.py --timeout 120 \
+  --server "DB_DSN=postgres://user:pass@localhost:5433/db?sslmode=disable AUTH_DISABLED=true DEV_MODE=true ADDR=:18080 go run ./cmd/server" \
+  --port 18080 -- python /tmp/ui_smoke.py
+```
+
+To validate selectors before Playwright:
+
+```bash
+python scripts/with_server.py --timeout 120 \
+  --server "ADDR=:18080 go run ./cmd/server" --port 18080 -- \
+  bash -lc "curl -s http://localhost:18080/ui | rg -n 'selector-text'"
+```
